@@ -31,15 +31,19 @@ module Split
     end
 
     def custom_variables
-      return nil if session[:split].nil?
-      arr = []
-      session[:split].each_with_index do |h,i|
-        arr << "_gaq.push(['_setCustomVar', #{i+1}, '#{h[0]}', '#{h[1]}', 1]);"
-      end
-      arr.reverse[0..4].reverse.join("\n")
+      custom_variables_from_redis
     end
 
     private
+
+      def custom_variables_from_redis
+        arr = []
+        ExperimentCatalog.all.select{ |e| not e.has_winner? }.each_with_index do |experiment, i|
+          alternative = ab_user[experiment.key]
+          arr << "_gaq.push(['_setCustomVar', #{i+1}, '#{experiment.key}', '#{alternative}', 1]);"
+        end
+        arr.join("\n")
+      end
 
       def insert_tracker_methods(tracker_methods)
         return nil if tracker_methods.nil?
