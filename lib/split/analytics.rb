@@ -38,9 +38,19 @@ module Split
 
       def custom_variables_from_redis
         arr = []
-        ExperimentCatalog.all.select{ |e| not e.has_winner? }.each_with_index do |experiment, i|
+        default_indexes = (1..5).to_a
+        # experiment with custom var: [name]_ga_var[index]
+
+        ExperimentCatalog.all.select{ |e| not e.has_winner? }.each do |experiment|
           alternative = ab_user[experiment.key]
-          arr << "_gaq.push(['_setCustomVar', #{i+1}, '#{experiment.key}', '#{alternative}', 1]);"
+
+          if experiment.key.match(/.*_ga_var(.)/).present?
+            index = experiment.key.match(/.*_ga_var(.)/).captures.first.to_i
+          else
+            index = default_indexes.shift
+          end
+
+          arr << "_gaq.push(['_setCustomVar', #{index}, '#{experiment.key}', '#{alternative}', 1]);"
         end
         arr.join("\n")
       end
